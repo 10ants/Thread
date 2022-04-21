@@ -1,7 +1,7 @@
 #include <iostream>
 #include <string>
 #include <thread>
-//#include <Windows.h>
+#include <Windows.h>
 
 class Thing
 {
@@ -12,47 +12,77 @@ public:
 
     void operator()(int n, std::string s) //Functor
     {
-        this->mNum  =n;
+        this->mNum = n;
         this->mStr = s;
     }
 
+    bool ThreeStatus = false;
+    void SetThreeStatus(bool Status) {ThreeStatus = Status;}
+    bool GetThreeStatus() {return ThreeStatus;}
     void SetInt(int number) {mNum = number;}
     int GetInt() {return mNum;}
-    void SetString(std::string string) {mStr = string;}
-    std::string GetString() {return mStr;}
-    
+    void SetString(std::string string) {mStr = string; }
+    std::string GetString() { return mStr;}
 };
 
 void CallFunc(Thing* ThingPTR, int n, std::string s)
 {
     ThingPTR->operator()(n, s);
 }
+
+void OneCounter(Thing* ThingPTR)
+{
+    while (!ThingPTR->GetThreeStatus())
+    {
+        ThingPTR->SetInt(17);
+        ThingPTR->SetString("One");
+    }
+}
+
+void TwoCounter(Thing* ThingPTR)
+{
+    while (!ThingPTR->GetThreeStatus())
+    {
+        ThingPTR->SetInt(ThingPTR->GetInt()+13);
+        ThingPTR->SetString("Two");
+    }
+}
+
+void ThreeCounter(Thing* ThingPTR)
+{
+    int ThreeCount = 0;
+    while (ThreeCount != INT_MAX)
+    {
+        if (ThreeCount == INT_MAX)
+            break;
+   
+        ThingPTR->SetInt(ThreeCount);
+        ThingPTR->SetString("Three");
+        ThreeCount++;
+    }
+    ThingPTR->SetThreeStatus(true);
+}
+
 int main()
 {
     std::cout << "Start\n";
-    int ThreeCount = 0;
-
-    while (ThreeCount < INT_MAX)
-    {
-        int ThreeCount = 0;
-        
+   int RaceTimer = 0;
+   while (RaceTimer != 100)
+   {
         Thing* ThingPTR = new Thing;
-        
-        std::thread WorkerOne(CallFunc, ThingPTR, 17, "One");
-        std::this_thread::yield();
-        std::thread WorkerTwo(CallFunc, ThingPTR, 16, "Two");
-        std::this_thread::yield();
-        std::thread WorkerThree(CallFunc, ThingPTR, ThreeCount, "Three");
-        std::this_thread::yield();
+        std::thread WorkerOne(OneCounter, ThingPTR);
+        std::thread WorkerTwo(TwoCounter, ThingPTR);
+        std::thread WorkerThree(ThreeCounter, ThingPTR);
 
-        for (int i = 0; i < INT_MAX; i++)
+        while (!ThingPTR->GetThreeStatus())
         {
-            ThreeCount = i;
+           std::cout << ThingPTR->GetInt() << " " << ThingPTR->GetString() << std::endl;
+           std::this_thread::sleep_for(std::chrono::seconds(1));
         }
-        
-        //Sleep(1);
-        std::cout << "Current int value is...." << ThingPTR->GetInt() << std::endl;
-        std::cout << "This was set by thread...." << ThingPTR->GetString() << std::endl;
-        std::cout << "End"<<std::endl;
-    }
+
+        WorkerOne.join();
+        WorkerTwo.join();
+        WorkerThree.join();
+       RaceTimer += 5;
+   }
 }
